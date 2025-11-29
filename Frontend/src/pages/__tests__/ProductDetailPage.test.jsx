@@ -2,6 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ProductDetailPage from '../ProductDetailPage';
+<<<<<<< HEAD
+import { AuthProvider } from '../../contexts/AuthContext';
+import { ProductsProvider } from '../../contexts/ProductsContext';
+import { CartProvider } from '../../contexts/CartContext';
+import * as productApi from '../../../services/product';
+import api from '../../../services/axios';
+
+vi.mock('../../../services/product');
+vi.mock('../../../services/axios');
+=======
+>>>>>>> c070a3c464b56f5e521b259407c4535c4d53442b
 
 const mockNavigate = vi.fn();
 let currentProductId = '123';
@@ -18,8 +29,13 @@ vi.mock('react-router-dom', async () => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+<<<<<<< HEAD
+    useParams: () => mockParams,
+    useLocation: () => ({ pathname: '/test', state: null })
+=======
     useParams: () => ({ productId: currentProductId }),
     useLocation: () => currentLocation,
+>>>>>>> c070a3c464b56f5e521b259407c4535c4d53442b
   };
 });
 
@@ -73,6 +89,26 @@ describe('ProductDetailPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+<<<<<<< HEAD
+  });
+
+  it('renders loading state initially', () => {
+    productApi.getProductById.mockImplementation(() => new Promise(() => {}));
+    api.get.mockImplementation(() => new Promise(() => {}));
+
+    renderProductDetailPage();
+
+    expect(screen.getByText(/Loading product/i)).toBeInTheDocument();
+  });
+
+  it('shows error when product is not found', async () => {
+    productApi.getProductById.mockResolvedValue(null);  // force product not found
+    api.get.mockResolvedValue({ data: { success: true, data: [] } });
+
+    renderProductDetailPage();
+
+    expect(await screen.findByText(/Product Not Found/i)).toBeInTheDocument();
+=======
     currentProductId = '123';
     addToCartMock = vi.fn();
     replaceCartWithMock = vi.fn();
@@ -95,6 +131,7 @@ describe('ProductDetailPage', () => {
     apiGetMock.mockResolvedValue({
       data: { success: true, data: [{ _id: 'r1' }] },
     });
+>>>>>>> c070a3c464b56f5e521b259407c4535c4d53442b
   });
 
   it('shows loading state while data is fetched', () => {
@@ -184,6 +221,37 @@ describe('ProductDetailPage', () => {
   it('accepts raw product documents', async () => {
     fetchProductByIdMock.mockResolvedValueOnce({
       _id: '123',
+<<<<<<< HEAD
+      title: 'Test Product',
+      description: 'Test description',
+      price: 999,
+      stock: 10,
+      images: [{ url: 'test.jpg' }],
+      categoryId: { name: 'Electronics' },
+      sellerId: { name: 'Test Seller' }
+    };
+
+    productApi.getProductById.mockResolvedValue({
+      success: true,
+      product: mockProduct
+    });
+
+    api.get.mockResolvedValue({ data: { success: true, data: [] } });
+
+    renderProductDetailPage();
+
+    // Wait for main UI
+    expect(await screen.findByText(/Test Product/i)).toBeInTheDocument();
+  });
+
+  it('handles API error gracefully', async () => {
+    productApi.getProductById.mockRejectedValue(new Error('API Error'));
+    api.get.mockResolvedValue({ data: { success: true, data: [] } });
+
+    renderProductDetailPage();
+
+    expect(await screen.findByText(/Unable to load product/i)).toBeInTheDocument();
+=======
       title: 'Raw Product',
     });
 
@@ -239,5 +307,6 @@ describe('ProductDetailPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Unable to load product. Please try again.')).toBeInTheDocument();
     });
+>>>>>>> c070a3c464b56f5e521b259407c4535c4d53442b
   });
 });
