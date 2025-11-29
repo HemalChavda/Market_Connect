@@ -5,11 +5,12 @@ const User = require("../models/user");
 
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 const callbackURL = process.env.NODE_ENV === 'production'
-  ? 'https://market-connect-2qmb.onrender.com/api/users/auth/google/callback'
+  ? `${process.env.BACKEND_URL}/api/users/auth/google/callback`
   : 'http://localhost:8080/api/users/auth/google/callback';
 
-console.log('Google OAuth Callback URL:', callbackURL);
-console.log(' Environment:', process.env.NODE_ENV);
+console.log('🔐 Google OAuth Callback URL:', callbackURL);
+console.log('🔐 Environment:', process.env.NODE_ENV);
+console.log('🔐 Backend URL:', process.env.BACKEND_URL);
   passport.use(
     new GoogleStrategy(
       {
