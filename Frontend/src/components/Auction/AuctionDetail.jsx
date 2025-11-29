@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from '../../contexts/CartContext';
 import * as auctionAPI from '../../../services/auction';
 import './AuctionDetail.css';
 
@@ -8,6 +9,7 @@ const AuctionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addToCart, clearCart } = useCart();
   const [showUpcomingMessage, setShowUpcomingMessage] = useState(false);
   
   const [auction, setAuction] = useState(null);
@@ -180,16 +182,24 @@ const AuctionDetail = () => {
   };
 
   const handleProceedToPayment = () => {
-    navigate('/checkout', {
-      state: {
-        auctionProduct: {
-          ...auction,
-          price: auction.auctionDetails?.currentBid || auction.auctionDetails?.startPrice,
-          quantity: 1,
-          isAuction: true
-        }
-      }
-    });
+    // Clear cart and add auction product
+    clearCart();
+    
+    // Add auction product to cart with winning bid price
+    const auctionProduct = {
+      _id: auction._id,
+      title: auction.title,
+      price: auction.auctionDetails?.currentBid || auction.auctionDetails?.startPrice,
+      images: auction.images,
+      stock: 1,
+      isAuction: true,
+      auctionId: auction._id
+    };
+    
+    addToCart(auctionProduct, 1);
+    
+    // Navigate to checkout
+    navigate('/checkout');
   };
 
   return (
