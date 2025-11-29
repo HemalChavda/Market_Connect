@@ -1,6 +1,5 @@
 # Market Connect
 
-![Market Connect Banner](./docs/assets/banner.png)
 
 Market Connect is a production-ready full-stack marketplace application for buyers and sellers that supports browsing, listing, purchasing, and managing products at scale. The project is implemented with a Node.js + Express backend, MongoDB (Mongoose) data layer, and a modern React front-end (Vite). It includes authentication (email/password + Google OAuth), role-based access, shopping cart and order flows, image uploads, email notifications, and seller analytics.
 
