@@ -86,6 +86,10 @@ const userSchema = new Schema(
     buyerInfo: {
       shippingAddresses: [addressSchema],
       cart: [cartSchema],
+      compareList: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product"
+      }],
     },
   },
   { timestamps: true }
