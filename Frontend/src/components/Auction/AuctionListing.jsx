@@ -19,7 +19,7 @@ const AuctionListing = () => {
 
   useEffect(() => {
     loadAuctions();
-    const interval = setInterval(loadAuctions, 30000);
+    const interval = setInterval(loadAuctions, 120000);
     return () => clearInterval(interval);
   }, []);
 
