@@ -234,12 +234,7 @@ exports.placeBid = async (req, res) => {
     // Populate the updated product for response
     const updatedProduct = await Product.findById(auctionId)
       .populate("sellerId", "name")
-      .populate("auctionDetails.highestBidder", "name")
-      .populate({
-        path: "auctionDetails.bidHistory",
-        populate: { path: "user", select: "name" },
-        options: { sort: { timestamp: -1 } }
-      });
+      .populate("auctionDetails.highestBidder", "name");
 
     res.status(200).json({
       success: true,

@@ -53,9 +53,9 @@ const AuctionDetail = () => {
       if (response && response.success && response.data) {
         console.log('Auction data:', response.data);
         setAuction(response.data);
-        // Set suggested bid amount
+        // Set suggested bid amount (minimum increment is 50)
         const currentBid = response.data.auctionDetails?.currentBid || response.data.auctionDetails?.startPrice || 0;
-        setBidAmount((currentBid + 100).toString());
+        setBidAmount((currentBid + 50).toString());
       } else {
         console.error('Invalid response:', response);
         setError('Auction not found');
@@ -119,19 +119,24 @@ const AuctionDetail = () => {
         return;
       }
 
+      console.log('Placing bid:', { auctionId: id, bidAmount: bidValue });
       const response = await auctionAPI.placeBid(id, bidValue);
+      console.log('Bid response:', response);
       
-      if (response.success) {
+      if (response && response.success) {
         // Refresh auction data to show new bid
         await loadAuction();
-        setBidAmount((bidValue + 100).toString()); // Set next suggested bid
+        setBidAmount((bidValue + 50).toString()); // Set next suggested bid (minimum increment)
         alert('Bid placed successfully!');
       } else {
-        setBidError(response.message || 'Failed to place bid');
+        console.error('Bid failed:', response);
+        setBidError(response?.message || 'Failed to place bid');
       }
     } catch (error) {
       console.error('Error placing bid:', error);
-      setBidError(error.response?.data?.message || 'Failed to place bid');
+      console.error('Error response:', error.response);
+      console.error('Error data:', error.response?.data);
+      setBidError(error.response?.data?.message || error.message || 'Failed to place bid');
     } finally {
       setBidding(false);
     }

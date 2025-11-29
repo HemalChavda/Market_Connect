@@ -263,27 +263,34 @@ const AuctionListing = () => {
                       e.target.src = '/placeholder-image.jpg';
                     }}
                   />
-                  <div className="auction-status completed">SOLD</div>
                 </div>
                 
                 <div className="auction-info-small">
                   <h4>{auction.title}</h4>
                   <div className="final-details">
-                    <span className="winning-bid">
-                      Winning Bid: ₹{auction.auctionDetails?.currentBid || auction.auctionDetails?.startPrice}
-                    </span>
-                    {auction.auctionDetails?.winner && !isWinner(auction) && (
-                      <span className="winner">
-                        Winner: {auction.auctionDetails.winner.name || 'Anonymous'}
+                    {auction.auctionDetails?.winner ? (
+                      <>
+                        <span className="winning-bid">
+                          Final Price: ₹{auction.auctionDetails.currentBid}
+                        </span>
+                        {!isWinner(auction) && (
+                          <span className="winner">
+                            Winner: {auction.auctionDetails.winner.name || 'Anonymous'}
+                          </span>
+                        )}
+                        {isWinner(auction) && (
+                          <button 
+                            className="payment-btn"
+                            onClick={() => handleProceedToPayment(auction)}
+                          >
+                            Proceed to Payment
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <span className="no-bids">
+                        No bids were placed
                       </span>
-                    )}
-                    {isWinner(auction) && (
-                      <button 
-                        className="payment-btn"
-                        onClick={() => handleProceedToPayment(auction)}
-                      >
-                        Proceed to Payment
-                      </button>
                     )}
                   </div>
                 </div>
