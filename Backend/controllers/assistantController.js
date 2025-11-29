@@ -169,21 +169,56 @@ class ProductSearchService {
         keywords.push(...rawWords);
       }
 
-      const uniqKeywords = Array.from(new Set(keywords.map((k) => String(k).trim().toLowerCase()).filter(Boolean)));
+      const uniqKeywords = Array.from(
+        new Set(keywords.map((k) => String(k).trim().toLowerCase()).filter(Boolean))
+      );
 
       const query = { ...baseQuery };
+      let priceFilter = null;
+
+      if (intentData && intentData.price_range) {
+        priceFilter = {};
+        const min = Number(intentData.price_range.min);
+        const max = Number(intentData.price_range.max);
+
+        if (!Number.isNaN(min) && Number.isFinite(min) && min > 0) {
+          priceFilter.$gte = min;
+        }
+        if (!Number.isNaN(max) && Number.isFinite(max) && max > 0) {
+          priceFilter.$lte = max;
+        }
+
+        if (Object.keys(priceFilter).length === 0) {
+          priceFilter = null;
+        } else {
+          query.price = priceFilter;
+        }
+      }
 
       if (Array.isArray(categoryIds) && categoryIds.length > 0) {
         query["categoryId"] = { $in: categoryIds };
       }
 
-      if (uniqKeywords.length > 0) {
-        const regexes = uniqKeywords.map((c) =>
+      const stopWords = new Set([
+        "i","am","im","want","need","to","buy","for","a","an","the",
+        "some","something","item","items","product","products","please",
+        "show","me","looking","look","find","search","you","can","help",
+      ]);
+
+      const searchTerms = (userQuery || "")
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter((w) => w && w.length >= 3 && !stopWords.has(w));
+
+      const termsForRegex = searchTerms.length > 0 ? searchTerms : uniqKeywords;
+
+      if (termsForRegex.length > 0) {
+        const regexes = termsForRegex.map((c) =>
           new RegExp(c.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&"), "i")
         );
 
         query["$or"] = [
-          { tags: { $in: uniqKeywords } },
+          { tags: { $in: termsForRegex } },
           { title: { $in: regexes } },
           { description: { $in: regexes } },
         ];
@@ -215,9 +250,15 @@ class ProductSearchService {
           };
         });
 
-        const fallbackQuery = searchConditions.length
-          ? { isDeleted: { $ne: true }, $and: searchConditions }
-          : { isDeleted: { $ne: true } };
+        const fallbackQuery = { isDeleted: { $ne: true } };
+
+        if (priceFilter) {
+          fallbackQuery.price = priceFilter;
+        }
+
+        if (searchConditions.length > 0) {
+          fallbackQuery.$and = searchConditions;
+        }
 
         console.log("[ProductSearch] fallback query:", JSON.stringify(fallbackQuery, null, 2));
 
