@@ -13,6 +13,11 @@ const {
 router.get("/", auctionController.getActiveAuctions);
 router.get("/upcoming", auctionController.getUpcomingAuctions);
 router.get("/recent/completed", auctionController.getRecentCompletedAuctions);
+
+//Protected - Bidding (must be before /:id route)
+router.post("/:id/bid", protect, auctionController.placeBid);
+
+//Public - Get by ID (must be after more specific routes)
 router.get("/:id", auctionController.getAuctionById);
 
 //Admin
