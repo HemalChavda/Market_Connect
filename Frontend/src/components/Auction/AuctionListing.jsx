@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from '../../contexts/CartContext';
 import * as auctionAPI from '../../../services/auction';
 import './AuctionListing.css';
 
 const AuctionListing = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addToCart, clearCart } = useCart();
   const [activeAuctions, setActiveAuctions] = useState([]);
   const [upcomingAuctions, setUpcomingAuctions] = useState([]);
   const [recentCompleted, setRecentCompleted] = useState([]);
@@ -17,7 +19,6 @@ const AuctionListing = () => {
 
   useEffect(() => {
     loadAuctions();
-    // Set up interval to refresh auctions every 30 seconds
     const interval = setInterval(loadAuctions, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -54,17 +55,24 @@ const AuctionListing = () => {
   };
 
   const handleProceedToPayment = (auction) => {
-    // Navigate to checkout with auction product details
-    navigate('/checkout', {
-      state: {
-        auctionProduct: {
-          ...auction,
-          price: auction.auctionDetails?.currentBid || auction.auctionDetails?.startPrice,
-          quantity: 1,
-          isAuction: true
-        }
-      }
-    });
+    // Clear cart and add auction product
+    clearCart();
+    
+    // Add auction product to cart with winning bid price
+    const auctionProduct = {
+      _id: auction._id,
+      title: auction.title,
+      price: auction.auctionDetails?.currentBid || auction.auctionDetails?.startPrice,
+      images: auction.images,
+      stock: 1,
+      isAuction: true,
+      auctionId: auction._id
+    };
+    
+    addToCart(auctionProduct, 1);
+    
+    // Navigate to checkout
+    navigate('/checkout');
   };
 
   const isWinner = (auction) => {
@@ -138,6 +146,10 @@ const AuctionListing = () => {
 
   return (
     <div className="auction-listing">
+      <button onClick={() => navigate('/dashboard')} className="back-to-dashboard-btn">
+        ← Back to Dashboard
+      </button>
+      
       <div className="auction-header">
         <h1>Live Auctions</h1>
         <p>Bid on exclusive items and win amazing deals!</p>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from '../../contexts/CartContext';
 import * as auctionAPI from '../../../services/auction';
 import './AuctionDetail.css';
 
@@ -8,6 +9,7 @@ const AuctionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addToCart, clearCart } = useCart();
   const [showUpcomingMessage, setShowUpcomingMessage] = useState(false);
   
   const [auction, setAuction] = useState(null);
@@ -16,12 +18,12 @@ const AuctionDetail = () => {
   const [bidAmount, setBidAmount] = useState('');
   const [bidding, setBidding] = useState(false);
   const [bidError, setBidError] = useState('');
+  const [bidSuccess, setBidSuccess] = useState('');
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
     if (id) {
       loadAuction();
-      // Refresh auction data every 10 seconds
       const interval = setInterval(loadAuction, 10000);
       return () => clearInterval(interval);
     }
@@ -103,6 +105,7 @@ const AuctionDetail = () => {
     }
 
     setBidError('');
+    setBidSuccess('');
     setBidding(true);
 
     try {
@@ -127,7 +130,9 @@ const AuctionDetail = () => {
         // Refresh auction data to show new bid
         await loadAuction();
         setBidAmount((bidValue + 50).toString()); // Set next suggested bid (minimum increment)
-        alert('Bid placed successfully!');
+        setBidSuccess(`Bid of ₹${bidValue} placed successfully!`);
+        // Clear success message after 5 seconds
+        setTimeout(() => setBidSuccess(''), 5000);
       } else {
         console.error('Bid failed:', response);
         setBidError(response?.message || 'Failed to place bid');
@@ -180,16 +185,24 @@ const AuctionDetail = () => {
   };
 
   const handleProceedToPayment = () => {
-    navigate('/checkout', {
-      state: {
-        auctionProduct: {
-          ...auction,
-          price: auction.auctionDetails?.currentBid || auction.auctionDetails?.startPrice,
-          quantity: 1,
-          isAuction: true
-        }
-      }
-    });
+    // Clear cart and add auction product
+    clearCart();
+    
+    // Add auction product to cart with winning bid price
+    const auctionProduct = {
+      _id: auction._id,
+      title: auction.title,
+      price: auction.auctionDetails?.currentBid || auction.auctionDetails?.startPrice,
+      images: auction.images,
+      stock: 1,
+      isAuction: true,
+      auctionId: auction._id
+    };
+    
+    addToCart(auctionProduct, 1);
+    
+    // Navigate to checkout
+    navigate('/checkout');
   };
 
   return (
@@ -238,6 +251,16 @@ const AuctionDetail = () => {
             
             {auction.description && (
               <p className="auction-description">{auction.description}</p>
+            )}
+
+            {/* Seller Information */}
+            {auction.sellerId && (
+              <div className="seller-info">
+                <h3>Seller Information</h3>
+                <p className="seller-name">
+                  {auction.sellerId.sellerInfo?.shopName || auction.sellerId.name || 'Seller'}
+                </p>
+              </div>
             )}
 
             {/* Current Bid Info */}
@@ -301,6 +324,10 @@ const AuctionDetail = () => {
                   
                   {bidError && (
                     <div className="bid-error">{bidError}</div>
+                  )}
+                  
+                  {bidSuccess && (
+                    <div className="bid-success">{bidSuccess}</div>
                   )}
                   
                   <button 

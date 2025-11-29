@@ -5,6 +5,25 @@
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+.back-to-dashboard-btn {
+  margin-bottom: 20px;
+  padding: 10px 20px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.back-to-dashboard-btn:hover {
+  background: #5a6268;
+}
+
 .auction-header {
   text-align: center;
   margin-bottom: 40px;

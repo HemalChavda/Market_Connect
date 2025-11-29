@@ -254,6 +254,36 @@
   font-size: 0.95rem;
 }
 
+.bid-success {
+  background: #f0fdf4;
+  color: #27ae60;
+  padding: 10px 15px;
+  border-radius: 6px;
+  border-left: 4px solid #27ae60;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.seller-info {
+  background: #f8f9fa;
+  padding: 15px 20px;
+  border-radius: 10px;
+  border-left: 4px solid #3498db;
+}
+
+.seller-info h3 {
+  color: #2c3e50;
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.seller-name {
+  color: #7f8c8d;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
 .place-bid-btn {
   padding: 15px 30px;
   background: linear-gradient(45deg, #3498db, #2980b9);
