@@ -19,7 +19,6 @@ const AuctionListing = () => {
 
   useEffect(() => {
     loadAuctions();
-    // Set up interval to refresh auctions every 30 seconds
     const interval = setInterval(loadAuctions, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -147,6 +146,10 @@ const AuctionListing = () => {
 
   return (
     <div className="auction-listing">
+      <button onClick={() => navigate('/dashboard')} className="back-to-dashboard-btn">
+        ← Back to Dashboard
+      </button>
+      
       <div className="auction-header">
         <h1>Live Auctions</h1>
         <p>Bid on exclusive items and win amazing deals!</p>

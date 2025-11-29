@@ -18,12 +18,12 @@ const AuctionDetail = () => {
   const [bidAmount, setBidAmount] = useState('');
   const [bidding, setBidding] = useState(false);
   const [bidError, setBidError] = useState('');
+  const [bidSuccess, setBidSuccess] = useState('');
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
     if (id) {
       loadAuction();
-      // Refresh auction data every 10 seconds
       const interval = setInterval(loadAuction, 10000);
       return () => clearInterval(interval);
     }
@@ -105,6 +105,7 @@ const AuctionDetail = () => {
     }
 
     setBidError('');
+    setBidSuccess('');
     setBidding(true);
 
     try {
@@ -129,7 +130,9 @@ const AuctionDetail = () => {
         // Refresh auction data to show new bid
         await loadAuction();
         setBidAmount((bidValue + 50).toString()); // Set next suggested bid (minimum increment)
-        alert('Bid placed successfully!');
+        setBidSuccess(`Bid of ₹${bidValue} placed successfully!`);
+        // Clear success message after 5 seconds
+        setTimeout(() => setBidSuccess(''), 5000);
       } else {
         console.error('Bid failed:', response);
         setBidError(response?.message || 'Failed to place bid');
@@ -250,6 +253,16 @@ const AuctionDetail = () => {
               <p className="auction-description">{auction.description}</p>
             )}
 
+            {/* Seller Information */}
+            {auction.sellerId && (
+              <div className="seller-info">
+                <h3>Seller Information</h3>
+                <p className="seller-name">
+                  {auction.sellerId.sellerInfo?.shopName || auction.sellerId.name || 'Seller'}
+                </p>
+              </div>
+            )}
+
             {/* Current Bid Info */}
             <div className="bid-info">
               <div className="current-bid">
@@ -311,6 +324,10 @@ const AuctionDetail = () => {
                   
                   {bidError && (
                     <div className="bid-error">{bidError}</div>
+                  )}
+                  
+                  {bidSuccess && (
+                    <div className="bid-success">{bidSuccess}</div>
                   )}
                   
                   <button 
