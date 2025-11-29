@@ -15,6 +15,9 @@ router.get("/upcoming", auctionController.getUpcomingAuctions);
 router.get("/recent/completed", auctionController.getRecentCompletedAuctions);
 router.get("/:id", auctionController.getAuctionById);
 
+//Protected - Bidding
+router.post("/:id/bid", protect, auctionController.placeBid);
+
 //Admin
 router.post(
   "/",

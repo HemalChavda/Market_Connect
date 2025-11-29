@@ -28,6 +28,7 @@ const analyticsRoutes = require('./routes/sellerAnalyticsRoutes.js');
 const auctionRoutes = require('./routes/auctionRoutes');
 const chatRoutes = require("./routes/chat");
 const assistantRoutes = require("./routes/assistant");
+const { startAuctionScheduler } = require('./jobs/auctionScheduler');
 
 if (process.env.NODE_ENV !== "test") {
   mongoose
@@ -90,6 +91,8 @@ const PORT = process.env.PORTT || 8080;
 if (require.main === module) {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    // Start the auction scheduler
+    startAuctionScheduler();
   });
 }
 

@@ -3,10 +3,10 @@ import api from "./axios";
 // Get all active auctions
 export const getActiveAuctions = async () => {
   try {
-    const response = await api.get("/auctions");
+    const response = await api.get('/auctions');
     return response.data;
   } catch (error) {
-    console.error("Error fetching auctions:", error);
+    console.error("Error fetching active auctions:", error);
     throw error;
   }
 };
@@ -14,10 +14,21 @@ export const getActiveAuctions = async () => {
 // Get upcoming auctions
 export const getUpcomingAuctions = async () => {
   try {
-    const response = await api.get("/auctions/upcoming");
+    const response = await api.get('/auctions/upcoming');
     return response.data;
   } catch (error) {
     console.error("Error fetching upcoming auctions:", error);
+    throw error;
+  }
+};
+
+// Get recent completed auctions
+export const getRecentCompletedAuctions = async () => {
+  try {
+    const response = await api.get('/auctions/recent/completed');
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching recent completed auctions:", error);
     throw error;
   }
 };
@@ -26,9 +37,22 @@ export const getUpcomingAuctions = async () => {
 export const getAuctionById = async (id) => {
   try {
     const response = await api.get(`/auctions/${id}`);
-    return response.data.data || response.data;
+    return response.data;
   } catch (error) {
     console.error("Error fetching auction:", error);
+    throw error;
+  }
+};
+
+// Place a bid on an auction
+export const placeBid = async (auctionId, bidAmount) => {
+  try {
+    const response = await api.post(`/auctions/${auctionId}/bid`, {
+      bidAmount: bidAmount
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error placing bid:", error);
     throw error;
   }
 };
@@ -36,7 +60,7 @@ export const getAuctionById = async (id) => {
 // Create auction (admin only)
 export const createAuction = async (auctionData) => {
   try {
-    const response = await api.post("/auctions", auctionData);
+    const response = await api.post('/auctions', auctionData);
     return response.data;
   } catch (error) {
     console.error("Error creating auction:", error);
@@ -44,21 +68,10 @@ export const createAuction = async (auctionData) => {
   }
 };
 
-// Update auction (admin only)
-export const updateAuction = async (id, updateData) => {
-  try {
-    const response = await api.put(`/auctions/${id}`, updateData);
-    return response.data;
-  } catch (error) {
-    console.error("Error updating auction:", error);
-    throw error;
-  }
-};
-
 // Cancel auction (admin only)
-export const cancelAuction = async (id) => {
+export const cancelAuction = async (auctionId) => {
   try {
-    const response = await api.delete(`/auctions/${id}`);
+    const response = await api.delete(`/auctions/${auctionId}`);
     return response.data;
   } catch (error) {
     console.error("Error cancelling auction:", error);
