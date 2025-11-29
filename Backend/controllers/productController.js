@@ -215,7 +215,9 @@ exports.compareProducts = async (req, res) => {
     const products = await Product.find({
       _id: { $in: ids },
       isDeleted: false,
-    }).lean();
+    })
+      .populate('categoryId', 'name')
+      .lean();
     if (products.length !== 2)
       return res
         .status(404)

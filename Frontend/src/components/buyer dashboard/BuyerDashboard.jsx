@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './dashboard.css';
 import Profile from '../profile/Profile';
 import CustomerService from '../customerService/CustomerService';
+import CompareSelector from './CompareSelector';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProducts } from '../../contexts/ProductsContext';
 import { useCart } from '../../contexts/CartContext';
@@ -20,7 +21,8 @@ import {
   faStore,
   faGavel,
   faComments,
-  faRobot
+  faRobot,
+  faExchangeAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { sendAssistantQuery } from '../../../services/assistant';
@@ -218,6 +220,45 @@ const BuyerDashboard = () => {
       setIsCartOpen(false);
       navigate('/checkout');
     });
+  };
+
+  const handleAddToCompare = (product) => {
+    const stored = localStorage.getItem('compareProducts');
+    const compareList = stored ? JSON.parse(stored) : [];
+
+    // Check if product is already in compare list
+    if (compareList.find(p => p._id === product._id)) {
+      alert('This product is already in your compare list');
+      return;
+    }
+
+    // Check if compare list is full
+    if (compareList.length >= 2) {
+      alert('You can only compare 2 products at a time. Please remove one first.');
+      return;
+    }
+
+    // Check if products are from the same category
+    if (compareList.length === 1) {
+      const existingProduct = compareList[0];
+      const existingCategoryId = existingProduct.categoryId?._id || existingProduct.categoryId;
+      const newCategoryId = product.categoryId?._id || product.categoryId;
+      
+      if (existingCategoryId !== newCategoryId) {
+        alert('Products must be from the same category to compare');
+        return;
+      }
+    }
+
+    // Add product to compare list
+    const updatedList = [...compareList, product];
+    localStorage.setItem('compareProducts', JSON.stringify(updatedList));
+    
+    // Trigger storage event to update CompareSelector
+    window.dispatchEvent(new Event('storage'));
+    
+    // Show success message
+    alert(`${product.title} added to compare list`);
   };
 
   const canBecomeSeller = !isAuthenticated || (isAuthenticated && user.role !== 'seller' && user.role !== 'both');
@@ -537,6 +578,16 @@ const BuyerDashboard = () => {
                         >
                           {isInStock ? 'Buy Now' : 'Out of Stock'}
                         </button>
+                        <button
+                          className="compare-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToCompare(product);
+                          }}
+                          title="Add to Compare"
+                        >
+                          <FontAwesomeIcon icon={faExchangeAlt} />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -663,6 +714,9 @@ const BuyerDashboard = () => {
         <span className="chatbot-badge">
           <FontAwesomeIcon icon={faRobot} />
         </span>      </button>
+
+      {/* Compare Selector Widget */}
+      <CompareSelector />
     </div>
   );
 };
