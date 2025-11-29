@@ -151,7 +151,6 @@ class ProductSearchService {
     try {
       const baseQuery = { isDeleted: { $ne: true } };
 
-      // Build keyword list from intent and raw query (generic, no hardcoded categories)
       const keywords = [];
 
       if (intentData) {
@@ -174,7 +173,6 @@ class ProductSearchService {
 
       const query = { ...baseQuery };
 
-      // If specific categories were chosen by the LLM, filter by those categoryIds
       if (Array.isArray(categoryIds) && categoryIds.length > 0) {
         query["categoryId"] = { $in: categoryIds };
       }
@@ -191,24 +189,43 @@ class ProductSearchService {
         ];
       }
 
-      let products = await Product.find(query).limit(20).exec();
+      console.log("[ProductSearch] intentData:", JSON.stringify(intentData || {}, null, 2));
+      console.log("[ProductSearch] categoryIds:", categoryIds);
+      console.log("[ProductSearch] uniqKeywords:", uniqKeywords);
+      console.log("[ProductSearch] primary query:", JSON.stringify(query, null, 2));
 
-      // Fallback: if nothing matched, ignore intent and do a broad text search on the raw query
+      let products = await Product.find(query).limit(20).exec();
+      console.log("[ProductSearch] primary search found products:", products.length);
+
       if ((!products || products.length === 0) && userQuery && userQuery.trim().length > 0) {
-        const q = userQuery.trim().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
-        const textRegex = new RegExp(q, "i");
-        const fallbackQuery = {
-          isDeleted: { $ne: true },
-          $or: [
-            { title: textRegex },
-            { description: textRegex },
-            { tags: { $in: [userQuery.trim().toLowerCase()] } },
-          ],
-        };
+        const terms = userQuery
+          .toLowerCase()
+          .split(/[^a-z0-9]+/)
+          .filter((w) => w && w.length >= 3);
+
+        const searchConditions = terms.map((term) => {
+          const safe = term.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+          const termRegex = new RegExp(safe, "i");
+          return {
+            $or: [
+              { title: termRegex },
+              { description: termRegex },
+              { tags: { $in: [term] } },
+            ],
+          };
+        });
+
+        const fallbackQuery = searchConditions.length
+          ? { isDeleted: { $ne: true }, $and: searchConditions }
+          : { isDeleted: { $ne: true } };
+
+        console.log("[ProductSearch] fallback query:", JSON.stringify(fallbackQuery, null, 2));
 
         products = await Product.find(fallbackQuery)
           .limit(20)
           .exec();
+
+        console.log("[ProductSearch] fallback search found products:", products.length);
       }
 
       return products;
@@ -256,14 +273,49 @@ const assistantController = {
       const intentData = await queryUnderstanding.analyzeQuery(message, conversationHistory, categoryNames);
 
       // Map chosen category names back to their ObjectIds
-      const requestedNames = (intentData.categories || []).map((n) => String(n).toLowerCase());
+      const requestedNames = (intentData.categories || []).map((n) => String(n).toLowerCase().trim());
       const chosenCategoryIds = allCategories
-        .filter((c) => requestedNames.includes(String(c.name).toLowerCase()))
+        .filter((c) => requestedNames.includes(String(c.name).toLowerCase().trim()))
         .map((c) => c._id);
 
+      console.log('[Assistant] Available categories:', categoryNames);
+      console.log('[Assistant] Extracted intent categories:', intentData.categories || []);
+      console.log('[Assistant] Mapped categoryIds:', chosenCategoryIds);
+
       const products = await productSearch.searchProducts(intentData, message, chosenCategoryIds);
-      
+
+      if (!products || products.length === 0) {
+        const noProductsText = "I couldn't find any products matching your request. Try changing your keywords or selecting a different category.";
+        console.log('[Assistant] No products found for this query.');
+
+        conversationHistory.push({ 
+          role: 'user', 
+          content: message,
+          timestamp: new Date().toISOString()
+        });
+        conversationHistory.push({ 
+          role: 'assistant', 
+          content: noProductsText,
+          products: [],
+          timestamp: new Date().toISOString()
+        });
+
+        if (conversationHistory.length > 20) {
+          conversationSessions.set(session_id, conversationHistory.slice(-20));
+        }
+
+        return res.json({
+          response: noProductsText,
+          products: [],
+          session_id: session_id,
+          timestamp: new Date().toISOString(),
+          product_count: 0
+        });
+      }
+
       const response = await responseGenerator.generateResponse(message, products, conversationHistory);
+
+      console.log('[Assistant] Products returned to user:', (response.products || []).length);
       
       conversationHistory.push({ 
         role: 'user', 
@@ -300,7 +352,7 @@ const assistantController = {
 
   getCategories: async (req, res) => {
     try {
-      const categories = await Product.distinct('category', { isActive: true });
+      const categories = await Category.find({}).select('name _id').lean();
       res.json({ categories });
     } catch (error) {
       console.error('Categories error:', error);
