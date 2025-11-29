@@ -151,11 +151,3 @@ Open http://localhost:3000 (frontend) and the backend runs at http://localhost:8
 *Contact & Support*
 - For questions about this codebase, contact the project owner or the contributor listed in the repo metadata.
 
----
-
-If you want, I can also:
-- Add more detailed API documentation (endpoints and request/response examples) to this README.
-- Add a minimal docker-compose file for local development (MongoDB + backend).
-- Generate an API Postman collection for quick testing.
-
-Tell me which of the above additions you'd like and I will add them.
