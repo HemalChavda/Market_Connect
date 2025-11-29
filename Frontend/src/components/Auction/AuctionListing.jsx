@@ -1,220 +1,334 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuction } from '../../contexts/AuctionContext';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import * as auctionAPI from '../../../services/auction';
 import './AuctionListing.css';
 
 const AuctionListing = () => {
-  const { auctions: allAuctions = [], upcomingAuctions: allUpcoming = [], getTimeRemaining } = useAuction();
   const navigate = useNavigate();
-
-  // ----------------------
-  // DEMO FALLBACK AUCTIONS
-  //-----------------------
-  const demoAuctions = [
-    {
-      id: 'demo1',
-      title: 'Apple MacBook Pro 16"',
-      description: 'M3 Pro chip, 16GB RAM, 512GB SSD — 2024 model.',
-      image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=800&q=80',
-      startingPrice: 1200,
-      currentBid: 1450,
-      bids: [{ id: 1, bidder: 'Alice', amount: 1450 }],
-      endTime: new Date(Date.now() + 1000 * 60 * 20).toISOString(),
-      status: 'active',
-    },
-    {
-      id: 'demo2',
-      title: 'Sony WH-1000XM5',
-      description: 'Noise cancelling headphones.',
-      image: 'https://images.unsplash.com/photo-1580894894513-64c9e52f4b25?auto=format&fit=crop&w=800&q=80',
-      startingPrice: 250,
-      currentBid: 310,
-      bids: [{ id: 2, bidder: 'John', amount: 310 }],
-      endTime: new Date(Date.now() + 1000 * 60 * 10).toISOString(),
-      status: 'active',
-    },
-    {
-      id: 'demo3',
-      title: 'Vintage Rolex Submariner',
-      description: 'Collector’s edition.',
-      image: 'https://images.unsplash.com/photo-1600185365483-26d7c7b5d43a?auto=format&fit=crop&w=800&q=80',
-      startingPrice: 8200,
-      currentBid: 9450,
-      bids: [{ id: 3, bidder: 'Michael', amount: 9450 }],
-      endTime: new Date(Date.now() + 1000 * 60 * 40).toISOString(),
-      status: 'active',
-    }
-  ];
-
-  // ----------------------
-  // DETERMINE WHICH AUCTIONS TO SHOW
-  // ----------------------
-  const activeRealAuctions = allAuctions.filter(a => a?.status === 'active' && a?.title);
-  const upcomingRealAuctions = allUpcoming.filter(a => a?.title);
-
-  // Show real active auctions if available, otherwise show empty state
-  const auctionsToShow = activeRealAuctions;
-
-  // ----------------------
-  // TIMER
-  // ----------------------
-  const [timeUpdates, setTimeUpdates] = useState({});
-  const [upcomingTimeUpdates, setUpcomingTimeUpdates] = useState({});
+  const { user } = useAuth();
+  const [activeAuctions, setActiveAuctions] = useState([]);
+  const [upcomingAuctions, setUpcomingAuctions] = useState([]);
+  const [recentCompleted, setRecentCompleted] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showUpcomingModal, setShowUpcomingModal] = useState(false);
+  const [selectedUpcoming, setSelectedUpcoming] = useState(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const updates = {};
-      auctionsToShow.forEach(a => {
-        updates[a.id] = getTimeRemaining?.(a.endTime) || {
-          total: Date.parse(a.endTime) - Date.now(),
-          seconds: 0,
-          minutes: 0,
-          hours: 0,
-          days: 0,
-        };
-      });
-      setTimeUpdates(updates);
-
-      const upcomingUpdates = {};
-      upcomingRealAuctions.forEach(a => {
-        upcomingUpdates[a.id] = getTimeRemaining?.(a.startTime) || {
-          total: Date.parse(a.startTime) - Date.now(),
-          seconds: 0,
-          minutes: 0,
-          hours: 0,
-          days: 0,
-        };
-      });
-      setUpcomingTimeUpdates(upcomingUpdates);
-    }, 1000);
-
+    loadAuctions();
+    // Set up interval to refresh auctions every 30 seconds
+    const interval = setInterval(loadAuctions, 30000);
     return () => clearInterval(interval);
-  }, [auctionsToShow, upcomingRealAuctions, getTimeRemaining]);
+  }, []);
 
-  const formatTime = (time) => {
-    if (!time || time.total <= 0) return 'Ended';
+  const loadAuctions = async () => {
+    try {
+      setLoading(true);
+      const [activeResponse, upcomingResponse, completedResponse] = await Promise.all([
+        auctionAPI.getActiveAuctions(),
+        auctionAPI.getUpcomingAuctions(),
+        auctionAPI.getRecentCompletedAuctions()
+      ]);
 
-    if (time.days > 0) return `${time.days}d ${time.hours}h`;
-    if (time.hours > 0) return `${time.hours}h ${time.minutes}m`;
-    return `${time.minutes}m ${time.seconds}s`;
+      if (activeResponse.success) {
+        setActiveAuctions(activeResponse.data || []);
+      }
+      if (upcomingResponse.success) {
+        setUpcomingAuctions(upcomingResponse.data || []);
+      }
+      if (completedResponse.success) {
+        setRecentCompleted(completedResponse.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading auctions:', error);
+      setError('Failed to load auctions');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleUpcomingClick = (auction) => {
+    setSelectedUpcoming(auction);
+    setShowUpcomingModal(true);
+  };
+
+  const handleProceedToPayment = (auction) => {
+    // Navigate to checkout with auction product details
+    navigate('/checkout', {
+      state: {
+        auctionProduct: {
+          ...auction,
+          price: auction.auctionDetails?.currentBid || auction.auctionDetails?.startPrice,
+          quantity: 1,
+          isAuction: true
+        }
+      }
+    });
+  };
+
+  const isWinner = (auction) => {
+    if (!user || !auction.auctionDetails?.winner) return false;
+    return auction.auctionDetails.winner.userId?.toString() === user._id?.toString() ||
+           auction.auctionDetails.winner.userId?.toString() === user.id?.toString();
+  };
+
+  const formatTimeRemaining = (endTime) => {
+    const now = new Date();
+    const end = new Date(endTime);
+    const diff = end - now;
+
+    if (diff <= 0) {
+      return 'Auction Ended';
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
+  const CountdownTimer = ({ endTime }) => {
+    const [timeLeft, setTimeLeft] = useState(formatTimeRemaining(endTime));
+
+    useEffect(() => {
+      const timer = setInterval(() => {
+        setTimeLeft(formatTimeRemaining(endTime));
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }, [endTime]);
+
+    return <span className="countdown-timer">{timeLeft}</span>;
+  };
+
+  if (loading) {
+    return (
+      <div className="auction-listing">
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading auctions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="auction-listing">
+        <div className="error-state">
+          <p>{error}</p>
+          <button onClick={loadAuctions} className="retry-btn">
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auction-listing">
-      <button className="back-button" onClick={() => navigate('/dashboard')}>
-        ← Back to Dashboard
-      </button>
-
       <div className="auction-header">
-        <h1>Bidding Page</h1>
-        <p>Browse and bid on exclusive products</p>
+        <h1>Live Auctions</h1>
+        <p>Bid on exclusive items and win amazing deals!</p>
       </div>
 
-      {auctionsToShow.length === 0 && upcomingRealAuctions.length === 0 ? (
-        <div className="no-auctions">
-          <div className="empty-state-icon">🔨</div>
-          <h2>No Active Auctions</h2>
-          <p>There are currently no live auctions. Check back soon for exciting deals!</p>
-          <button className="btn-back" onClick={() => navigate('/dashboard')}>
-            Back to Dashboard
-          </button>
+      {/* Active Auctions */}
+      <section className="auction-section">
+        <h2>Active Auctions ({activeAuctions.length})</h2>
+        {activeAuctions.length === 0 ? (
+          <div className="empty-state">
+            <p>No active auctions at the moment.</p>
+            <p>Check back later for exciting deals!</p>
+          </div>
+        ) : (
+          <div className="auction-grid">
+            {activeAuctions.map((auction) => (
+              <div key={auction._id} className="auction-card">
+                <div className="auction-image">
+                  <img 
+                    src={auction.images?.[0]?.url || '/placeholder-image.jpg'} 
+                    alt={auction.title}
+                    onError={(e) => {
+                      e.target.src = '/placeholder-image.jpg';
+                    }}
+                  />
+                  <div className="auction-status active">LIVE</div>
+                </div>
+                
+                <div className="auction-info">
+                  <h3 className="auction-title">{auction.title}</h3>
+                  
+                  <div className="auction-details">
+                    <div className="price-info">
+                      <span className="current-bid">
+                        Current Bid: ₹{auction.auctionDetails?.currentBid || auction.auctionDetails?.startPrice || 0}
+                      </span>
+                      <span className="bid-count">
+                        {auction.auctionDetails?.bidHistory?.length || 0} bids
+                      </span>
+                    </div>
+                    
+                    <div className="time-remaining">
+                      <span className="time-label">Time Left:</span>
+                      <CountdownTimer endTime={auction.auctionDetails?.endTime} />
+                    </div>
+                  </div>
+                  
+                  <Link 
+                    to={`/auctions/${auction._id}`} 
+                    className="bid-now-btn"
+                  >
+                    Bid Now
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Upcoming Auctions */}
+      {upcomingAuctions.length > 0 && (
+        <section className="auction-section">
+          <h2>Upcoming Auctions ({upcomingAuctions.length})</h2>
+          <div className="auction-grid">
+            {upcomingAuctions.map((auction) => (
+              <div 
+                key={auction._id} 
+                className="auction-card upcoming-card"
+                onClick={() => handleUpcomingClick(auction)}
+              >
+                <div className="auction-image">
+                  <img 
+                    src={auction.images?.[0]?.url || '/placeholder-image.jpg'} 
+                    alt={auction.title}
+                    onError={(e) => {
+                      e.target.src = '/placeholder-image.jpg';
+                    }}
+                  />
+                  <div className="auction-status upcoming">UPCOMING</div>
+                </div>
+                
+                <div className="auction-info">
+                  <h3 className="auction-title">{auction.title}</h3>
+                  
+                  <div className="auction-details">
+                    <div className="price-info">
+                      <span className="starting-price">
+                        Starting Price: ₹{auction.auctionDetails?.startPrice || 0}
+                      </span>
+                    </div>
+                    
+                    <div className="start-time">
+                      <span className="time-label">Starts On:</span>
+                      <span className="start-date">
+                        {new Date(auction.auctionDetails?.startTime).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <button className="view-btn">
+                    View Details
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Recent Completed Auctions */}
+      {recentCompleted.length > 0 && (
+        <section className="auction-section">
+          <h2>Recently Completed</h2>
+          <div className="completed-auctions">
+            {recentCompleted.map((auction) => (
+              <div key={auction._id} className="completed-auction-card">
+                <div className="auction-image-small">
+                  <img 
+                    src={auction.images?.[0]?.url || '/placeholder-image.jpg'} 
+                    alt={auction.title}
+                    onError={(e) => {
+                      e.target.src = '/placeholder-image.jpg';
+                    }}
+                  />
+                </div>
+                
+                <div className="auction-info-small">
+                  <h4>{auction.title}</h4>
+                  <div className="final-details">
+                    {auction.auctionDetails?.winner ? (
+                      <>
+                        <span className="winning-bid">
+                          Final Price: ₹{auction.auctionDetails.currentBid}
+                        </span>
+                        {!isWinner(auction) && (
+                          <span className="winner">
+                            Winner: {auction.auctionDetails.winner.name || 'Anonymous'}
+                          </span>
+                        )}
+                        {isWinner(auction) && (
+                          <button 
+                            className="payment-btn"
+                            onClick={() => handleProceedToPayment(auction)}
+                          >
+                            Proceed to Payment
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <span className="no-bids">
+                        No bids were placed
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Upcoming Auction Modal */}
+      {showUpcomingModal && selectedUpcoming && (
+        <div className="modal-overlay" onClick={() => setShowUpcomingModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Upcoming Auction</h3>
+              <button className="modal-close" onClick={() => setShowUpcomingModal(false)}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="modal-message">
+                This auction hasn't started yet.
+              </p>
+              <p className="modal-start-time">
+                It will begin on <strong>{new Date(selectedUpcoming.auctionDetails?.startTime).toLocaleString()}</strong>
+              </p>
+              <div className="modal-auction-info">
+                <h4>{selectedUpcoming.title}</h4>
+                <p>Starting Price: ₹{selectedUpcoming.auctionDetails?.startPrice}</p>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-primary" onClick={() => setShowUpcomingModal(false)}>
+                OK
+              </button>
+            </div>
+          </div>
         </div>
-      ) : (
-        <>
-          {auctionsToShow.length > 0 && (
-            <div className="auctions-section">
-              <h2 className="section-title">Live Auctions</h2>
-              <div className="auctions-grid">
-                {auctionsToShow.map(auction => {
-                  const timeLeft = timeUpdates[auction.id];
-                  const isUrgent = timeLeft?.total > 0 && timeLeft.total < 5 * 60 * 1000;
-
-                  return (
-                    <div 
-                      key={auction.id}
-                      className={`auction-card ${isUrgent ? 'urgent' : ''}`}
-                      onClick={() => navigate(`/auctions/${auction.id}`)}
-                    >
-                      <div className="auction-image">
-                        <img src={auction.image} alt={auction.title} />
-                        {isUrgent && <div className="urgent-badge">Ending Soon!</div>}
-                      </div>
-
-                      <div className="auction-info">
-                        <h3>{auction.title}</h3>
-                        <p className="auction-description">{auction.description}</p>
-
-                        <div className="auction-details">
-                          <div className="bid-info">
-                            <span className="label">Current Bid:</span>
-                            <span className="current-bid">₹{auction.currentBid}</span>
-                          </div>
-
-                          <div className="time-remaining">
-                            <span className="label">Time Left:</span>
-                            <span className={`time ${isUrgent ? 'urgent-time' : ''}`}>
-                              {formatTime(timeLeft)}
-                            </span>
-                          </div>
-
-                          <div className="bid-count">
-                            <span>{auction.bids?.length || 0} bids</span>
-                          </div>
-                        </div>
-
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {upcomingRealAuctions.length > 0 && (
-            <div className="auctions-section upcoming-section">
-              <h2 className="section-title">Upcoming Auctions</h2>
-              <div className="auctions-grid">
-                {upcomingRealAuctions.map(auction => {
-                  const timeUntilStart = upcomingTimeUpdates[auction.id];
-                  const isSoon = timeUntilStart?.total > 0 && timeUntilStart.total < 60 * 60 * 1000;
-
-                  return (
-                    <div 
-                      key={auction.id}
-                      className={`auction-card upcoming ${isSoon ? 'urgent' : ''}`}
-                      onClick={() => navigate(`/auctions/${auction.id}`)}
-                    >
-                      <div className="auction-image">
-                        <img src={auction.image} alt={auction.title} />
-                        {isSoon && <div className="urgent-badge">Starting Soon!</div>}
-                      </div>
-
-                      <div className="auction-info">
-                        <h3>{auction.title}</h3>
-                        <p className="auction-description">{auction.description}</p>
-
-                        <div className="auction-details">
-                          <div className="bid-info">
-                            <span className="label">Starting Price:</span>
-                            <span className="current-bid">₹{auction.startingPrice}</span>
-                          </div>
-
-                          <div className="time-remaining">
-                            <span className="label">Starts In:</span>
-                            <span className={`time ${isSoon ? 'urgent-time' : ''}`}>
-                              {formatTime(timeUntilStart)}
-                            </span>
-                          </div>
-                        </div>
-
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </>
       )}
     </div>
   );
