@@ -99,12 +99,22 @@ const productSchema = new Schema(
       startPrice: { type: Number, default: 1 },
       currentBid: { type: Number },
       highestBidder: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      bidHistory: [{ type: mongoose.Schema.Types.ObjectId, ref: "Bid" }],
+      bidHistory: [{
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        amount: { type: Number },
+        timestamp: { type: Date }
+      }],
       status: {
         type: String,
         enum: ["Pending", "Active", "Completed", "Cancelled"],
         default: "Pending",
       },
+      winner: {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        name: { type: String },
+        email: { type: String },
+        winningBid: { type: Number }
+      }
     },
   },
   { timestamps: true }
