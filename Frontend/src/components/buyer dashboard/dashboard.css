@@ -688,6 +688,27 @@
     transform: none;
 }
 
+/* Compare Button */
+.compare-btn {
+    background-color: #ff9800;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+}
+
+.compare-btn:hover {
+    background-color: #f57c00;
+    transform: translateY(-1px);
+}
+
 /* Desktop hover behavior: show actions on hover only */
 @media (hover: hover) and (pointer: fine) {
     .product-actions {
