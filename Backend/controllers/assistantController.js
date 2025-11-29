@@ -202,7 +202,7 @@ class ProductSearchService {
       const stopWords = new Set([
         "i","am","im","want","need","to","buy","for","a","an","the",
         "some","something","item","items","product","products","please",
-        "show","me","looking","look","find","search","you","can","help",
+        "show","me","looking","look","find","search","you","can","help",  
       ]);
 
       const searchTerms = (userQuery || "")
